@@ -74,6 +74,76 @@ export const useBuilderStore = defineStore('builder', () => {
         selectedElementId.value = null
     }
 
+    // ===== SAVE/LOAD FUNCTIONALITY =====
+
+    const STORAGE_KEY = 'builder-project'
+
+    function saveProject() {
+        const project = {
+            elements: elements.value,
+            timestamp: new Date().toISOString()
+        }
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(project))
+            return true
+        } catch (error) {
+            console.error('Failed to save project:', error)
+            return false
+        }
+    }
+
+    function loadProject() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY)
+            if (saved) {
+                const project = JSON.parse(saved)
+                elements.value = project.elements || []
+                selectedElementId.value = null
+                return true
+            }
+            return false
+        } catch (error) {
+            console.error('Failed to load project:', error)
+            return false
+        }
+    }
+
+    function exportProject() {
+        const project = {
+            elements: elements.value,
+            timestamp: new Date().toISOString(),
+            version: '1.0'
+        }
+        return JSON.stringify(project, null, 2)
+    }
+
+    function importProject(jsonString: string) {
+        try {
+            const project = JSON.parse(jsonString)
+            if (project.elements && Array.isArray(project.elements)) {
+                elements.value = project.elements
+                selectedElementId.value = null
+                return true
+            }
+            return false
+        } catch (error) {
+            console.error('Failed to import project:', error)
+            return false
+        }
+    }
+
+    function hasUnsavedChanges() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY)
+            if (!saved) return elements.value.length > 0
+
+            const project = JSON.parse(saved)
+            return JSON.stringify(elements.value) !== JSON.stringify(project.elements)
+        } catch {
+            return false
+        }
+    }
+
     return {
         // State
         elements,
@@ -88,6 +158,12 @@ export const useBuilderStore = defineStore('builder', () => {
         updateElementContent,
         deleteElement,
         selectElement,
-        clearCanvas
+        clearCanvas,
+        // Save/Load
+        saveProject,
+        loadProject,
+        exportProject,
+        importProject,
+        hasUnsavedChanges
     }
 })
