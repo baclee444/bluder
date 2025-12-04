@@ -85,7 +85,7 @@
             <!-- Actions -->
             <div class="property-actions">
                 <button class="btn-delete" @click="handleDelete">
-                    🗑️ Delete Element
+                    Delete Element
                 </button>
             </div>
         </div>

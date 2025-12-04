@@ -5,17 +5,20 @@
             <p>Drag components here to start building</p>
         </div>
 
-        <div v-for="element in builderStore.allElements" :key="element.id" :class="['canvas-element', {
-            selected: element.id === builderStore.selectedElementId,
-            dragging: isDragging && draggedElementId === element.id
-        }]" :style="element.styles as any" @click.stop="handleElementClick(element.id)"
+        <div v-for="element in builderStore.allElements" :key="element.id" :class="[
+            'canvas-element',
+            {
+                selected: element.id === builderStore.selectedElementId,
+                dragging: isDragging && draggedElementId === element.id,
+            },
+        ]" :style="element.styles as any" @click.stop="handleElementClick(element.id)"
             @mousedown.stop="handleElementMouseDown($event, element.id)">
             <template v-if="element.type === 'image'">
                 <img :src="element.content" :alt="element.content"
-                    style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;" />
+                    style="width: 100%; height: 100%; object-fit: cover; pointer-events: none" />
             </template>
             <template v-else-if="element.type === 'button'">
-                <button type="button" style="width: 100%; height: 100%; cursor: pointer; pointer-events: none;">
+                <button type="button" style="width: 100%; height: 100%; cursor: pointer; pointer-events: none">
                     {{ element.content }}
                 </button>
             </template>
@@ -27,115 +30,108 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useBuilderStore } from '@/stores/builderStore'
-import type { PaletteItem } from '@/types/types'
+import { ref } from "vue";
+import { useBuilderStore } from "@/stores/builderStore";
+import type { PaletteItem } from "@/types/types";
 
-const builderStore = useBuilderStore()
+const builderStore = useBuilderStore();
 
 // Drag state cho việc di chuyển element
-const isDragging = ref(false)
-const draggedElementId = ref<string | null>(null)
-const dragOffset = ref({ x: 0, y: 0 })
+const isDragging = ref(false);
+const draggedElementId = ref<string | null>(null);
+const dragOffset = ref({ x: 0, y: 0 });
 
 function handleDragOver(event: DragEvent) {
-    event.preventDefault()
+    event.preventDefault();
     if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'copy'
+        event.dataTransfer.dropEffect = "copy";
     }
 }
 
 function handleDrop(event: DragEvent) {
-    event.preventDefault()
+    event.preventDefault();
 
-    if (!event.dataTransfer) return
+    if (!event.dataTransfer) return;
 
-    const data = event.dataTransfer.getData('application/json')
-    if (!data) return
+    const data = event.dataTransfer.getData("application/json");
+    if (!data) return;
 
     try {
-        const item: PaletteItem = JSON.parse(data)
-        const canvas = event.currentTarget as HTMLElement
-        const rect = canvas.getBoundingClientRect()
+        const item: PaletteItem = JSON.parse(data);
+        const canvas = event.currentTarget as HTMLElement;
+        const rect = canvas.getBoundingClientRect();
 
-        const x = event.clientX - rect.left
-        const y = event.clientY - rect.top
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
 
-        builderStore.addElement(
-            item.type,
-            item.defaultContent,
-            item.defaultStyles,
-            { x, y }
-        )
+        builderStore.addElement(item.type, item.defaultContent, item.defaultStyles, { x, y });
     } catch (error) {
-        console.error('Error parsing dropped data:', error)
+        console.error("Error parsing dropped data:", error);
     }
 }
-
-// ===== XỬ LÝ DI CHUYỂN ELEMENT =====
 
 function handleElementMouseDown(event: MouseEvent, elementId: string) {
     // Chọn element
-    builderStore.selectElement(elementId)
+    builderStore.selectElement(elementId);
 
     // Bắt đầu drag
-    isDragging.value = true
-    draggedElementId.value = elementId
+    isDragging.value = true;
+    draggedElementId.value = elementId;
 
     // Lấy element hiện tại
-    const element = builderStore.allElements.find(el => el.id === elementId)
-    if (!element) return
+    const element = builderStore.allElements.find((el) => el.id === elementId);
+    if (!element) return;
 
     // Tính offset: khoảng cách từ vị trí click đến góc trên-trái của element
-    const canvas = (event.currentTarget as HTMLElement).parentElement as HTMLElement
-    const rect = canvas.getBoundingClientRect()
+    const canvas = (event.currentTarget as HTMLElement).parentElement as HTMLElement;
+    const rect = canvas.getBoundingClientRect();
 
-    const clickX = event.clientX - rect.left
-    const clickY = event.clientY - rect.top
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
 
     dragOffset.value = {
         x: clickX - element.position.x,
-        y: clickY - element.position.y
-    }
+        y: clickY - element.position.y,
+    };
 }
 
 function handleMouseMove(event: MouseEvent) {
-    if (!isDragging.value || !draggedElementId.value) return
+    if (!isDragging.value || !draggedElementId.value) return;
 
-    event.preventDefault()
+    event.preventDefault();
 
-    const canvas = event.currentTarget as HTMLElement
-    const rect = canvas.getBoundingClientRect()
+    const canvas = event.currentTarget as HTMLElement;
+    const rect = canvas.getBoundingClientRect();
 
     // Tính vị trí mới
-    const newX = event.clientX - rect.left - dragOffset.value.x
-    const newY = event.clientY - rect.top - dragOffset.value.y
+    const newX = event.clientX - rect.left - dragOffset.value.x;
+    const newY = event.clientY - rect.top - dragOffset.value.y;
 
     // Cập nhật vị trí element
     builderStore.updateElement(draggedElementId.value, {
         position: { x: newX, y: newY },
         styles: {
-            ...builderStore.allElements.find(el => el.id === draggedElementId.value)?.styles,
+            ...builderStore.allElements.find((el) => el.id === draggedElementId.value)?.styles,
             top: `${newY}px`,
-            left: `${newX}px`
-        }
-    })
+            left: `${newX}px`,
+        },
+    });
 }
 
 function handleMouseUp() {
-    isDragging.value = false
-    draggedElementId.value = null
+    isDragging.value = false;
+    draggedElementId.value = null;
 }
 
 function handleElementClick(id: string) {
     if (!isDragging.value) {
-        builderStore.selectElement(id)
+        builderStore.selectElement(id);
     }
 }
 
 function handleCanvasClick() {
     if (!isDragging.value) {
-        builderStore.selectElement(null)
+        builderStore.selectElement(null);
     }
 }
 </script>
@@ -147,8 +143,7 @@ function handleCanvasClick() {
     position: relative;
     min-height: 600px;
     min-width: 400px;
-    background-image:
-        linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    background-image: linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
     background-size: 20px 20px;
 }
